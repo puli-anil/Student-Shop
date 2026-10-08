@@ -1,0 +1,10 @@
+{
+  "name": "student-shop",
+  "version": "1.0.0",
+  "description": "Hyperlocal Campus Marketplace & Student Life Hub for R.V.R. & J.C. College of Engineering",
+  "main": "index.html",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "private": true
+}
