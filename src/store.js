@@ -181,31 +181,21 @@ export class CampusStore {
   async signup(name, email, password, collegeName, rollNo) {
     try {
       const normalizedEmail = email.toLowerCase().trim();
-
-      const { data, error } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password,
-        options: {
-          data: {
-            name,
-            college_name: collegeName,
-            roll_no: rollNo,
-            campus: this.selectedCampus.id
-          }
+      let passHash = password;
+      try {
+        if (typeof crypto !== 'undefined' && crypto.subtle) {
+          const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+          passHash = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
-      });
-
-      if (error) {
-        console.warn('Supabase Auth Signup Notice:', error.message);
-      }
+      } catch (e) {}
 
       const user = {
-        id: data?.user?.id || 'usr_' + Date.now(),
+        id: 'usr_' + Date.now(),
         name: name || normalizedEmail.split('@')[0],
         email: normalizedEmail,
         college_name: collegeName || this.selectedCampus.fullName,
         roll_no: rollNo || 'REG-' + Math.floor(100000 + Math.random()*900000),
-        hostel: collegeName || this.selectedCampus.name,
+        hostel: this.selectedCampus.hostels[0],
         campus: this.selectedCampus.id,
         year: 'Verified Student',
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
@@ -213,7 +203,30 @@ export class CampusStore {
         password: password
       };
 
-      // Save user to registered user store
+      // 1. Save user to Supabase Cloud Profiles Table
+      try {
+        const avatarMeta = JSON.stringify({
+          url: user.avatar,
+          pass: passHash
+        });
+
+        await supabase.from('profiles').upsert([{
+          id: user.id,
+          name: user.name,
+          email: normalizedEmail,
+          college_name: user.college_name,
+          roll_no: user.roll_no,
+          hostel: user.hostel,
+          campus: user.campus,
+          year: 'Verified Student',
+          avatar: avatarMeta,
+          verified: true
+        }]);
+      } catch (err) {
+        console.warn('Supabase cloud profile save notice:', err);
+      }
+
+      // 2. Save user to local storage for quick login on this device
       const regUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
       const filtered = regUsers.filter(u => u.email !== normalizedEmail);
       filtered.push(user);
@@ -231,6 +244,13 @@ export class CampusStore {
   async login(email, password) {
     try {
       const normalizedEmail = email.toLowerCase().trim();
+      let inputPassHash = password;
+      try {
+        if (typeof crypto !== 'undefined' && crypto.subtle) {
+          const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+          inputPassHash = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+      } catch (e) {}
 
       // 1. Check registered users in local storage first
       const regUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
@@ -246,7 +266,56 @@ export class CampusStore {
         return { success: true, user: registeredUser };
       }
 
-      // 2. Check preset initial demo users
+      // 2. Check Supabase Cloud Profiles Table for cross-device login
+      try {
+        const { data: cloudProfiles, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', normalizedEmail);
+
+        if (!error && cloudProfiles && cloudProfiles.length > 0) {
+          const p = cloudProfiles[0];
+          let passMatch = false;
+
+          try {
+            const meta = JSON.parse(p.avatar || '{}');
+            if (meta.pass === inputPassHash || meta.pass === password) {
+              passMatch = true;
+            }
+          } catch (e) {}
+
+          if (!passMatch) {
+            return { success: false, error: 'Wrong password entered. Please try again.' };
+          }
+
+          const restoredUser = {
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            college_name: p.college_name || this.selectedCampus.fullName,
+            roll_no: p.roll_no || 'REG-STUDENT',
+            hostel: p.hostel || this.selectedCampus.hostels[0],
+            campus: p.campus || this.selectedCampus.id,
+            year: 'Verified Student',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+            verified: true,
+            password: password
+          };
+
+          // Save to local storage for future fast logins
+          regUsers.push(restoredUser);
+          localStorage.setItem('registered_users', JSON.stringify(regUsers));
+
+          this.currentUser = restoredUser;
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(restoredUser));
+          this.notify();
+          return { success: true, user: restoredUser };
+        }
+      } catch (err) {
+        console.warn('Supabase cloud profile check notice:', err);
+      }
+
+      // 3. Check preset initial demo users
       let demoUser = INITIAL_USERS.find(u => u.email.toLowerCase() === normalizedEmail);
       if (demoUser) {
         if (password !== 'password123') {
@@ -258,38 +327,11 @@ export class CampusStore {
         return { success: true, user: demoUser };
       }
 
-      // 3. Attempt Supabase Auth login
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-        if (!error && data?.user) {
-          const meta = data.user.user_metadata || {};
-          const user = {
-            id: data.user.id,
-            name: meta.name || normalizedEmail.split('@')[0],
-            email: data.user.email,
-            hostel: meta.hostel || this.selectedCampus.hostels[0],
-            student_type: meta.student_type || 'Student',
-            campus: meta.campus || this.selectedCampus.id,
-            year: 'Verified Student',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-            verified: true,
-            password: password
-          };
-          this.currentUser = user;
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-          this.notify();
-          return { success: true, user };
-        }
-      } catch (e) {
-        console.warn('Supabase signin check:', e);
-      }
-
-      // 4. User is NOT found -> Return explicit wrong username & password error
+      // 4. User is NOT found
       return { 
         success: false, 
         error: 'Wrong email or password. Account not found. Please click "Create Student Account" to sign up.' 
       };
-
     } catch (err) {
       return { success: false, error: err.message };
     }
@@ -303,7 +345,7 @@ export class CampusStore {
 
       const googleUser = {
         id: 'google_usr_' + Date.now(),
-        name: `${formattedName} (Google Verified)`,
+        name: `${formattedName}`,
         email: googleEmail,
         college_name: this.selectedCampus.fullName,
         roll_no: 'REG-GOOGLE-VERIFIED',
@@ -315,6 +357,24 @@ export class CampusStore {
         verified: true,
         auth_provider: 'google'
       };
+
+      // Sync Google user into Supabase cloud profiles table
+      try {
+        await supabase.from('profiles').upsert([{
+          id: googleUser.id,
+          name: googleUser.name,
+          email: googleEmail,
+          college_name: googleUser.college_name,
+          roll_no: googleUser.roll_no,
+          hostel: googleUser.hostel,
+          campus: googleUser.campus,
+          year: 'Verified Student',
+          avatar: JSON.stringify({ url: googleUser.avatar, auth: 'google' }),
+          verified: true
+        }]);
+      } catch (err) {
+        console.warn('Google profile cloud save notice:', err);
+      }
 
       // Register Google user in local storage
       const regUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
