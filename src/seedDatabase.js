@@ -1,8 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CAMPUSES, INITIAL_LISTINGS } from './src/seedData.js';
+import { CAMPUSES, INITIAL_LISTINGS } from './seedData.js';
 
-const SUPABASE_URL = 'https://btvogucxbrsbgscrcdub.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_-w6Nk-Ho8AM5MGVYcjQMMQ_be6PybrV';
+const SUPABASE_URL = 'https://nwoqmravjqbobjqjitua.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3FtcmF2anFib2JqcWppdHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4OTA0MjAsImV4cCI6MjEwNzQ2NjQyMH0.VcYJDQQLYHw73mIMXvhALtYEhg4AnxXXyfDpzWOex4Y';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -36,5 +36,5 @@ export async function seedSupabaseData() {
 
   const { error: listingErr } = await supabase.from('listings').upsert(formattedListings);
   if (listingErr) console.error('Error seeding listings:', listingErr);
-  else console.log('35+ Campus Listings seeded to Supabase successfully!');
+  else console.log('Campus Listings seeded to Supabase successfully!');
 }
