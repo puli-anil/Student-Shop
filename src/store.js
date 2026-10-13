@@ -134,6 +134,13 @@ export class CampusStore {
         return { success: false, error: data.error || 'Failed to send OTP email.' };
       }
 
+      // Store serverless verification token & expiration
+      this.pendingOtp = {
+        email: email.toLowerCase().trim(),
+        token: data.token,
+        expiresAt: data.expiresAt
+      };
+
       return { success: true, simulated: data.simulated };
     } catch (err) {
       return { success: false, error: err.message };
@@ -142,10 +149,21 @@ export class CampusStore {
 
   async verifyEmailOtp(email, otpCode) {
     try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const payload = {
+        email: normalizedEmail,
+        otp: (otpCode || '').trim()
+      };
+
+      if (this.pendingOtp && this.pendingOtp.email === normalizedEmail) {
+        payload.token = this.pendingOtp.token;
+        payload.expiresAt = this.pendingOtp.expiresAt;
+      }
+
       const res = await fetch('/api/verify-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, otp: otpCode })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
 
@@ -153,6 +171,7 @@ export class CampusStore {
         return { success: false, error: data.error || 'Invalid 6-digit OTP code.' };
       }
 
+      this.pendingOtp = null;
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };

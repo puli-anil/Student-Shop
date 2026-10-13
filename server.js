@@ -148,85 +148,15 @@ const server = http.createServer((req, res) => {
   }
 
   // 1. API: Send Email OTP
-  if (req.url.startsWith('/api/send-email-otp') && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
-    req.on('end', async () => {
-      try {
-        const { email } = JSON.parse(body || '{}');
-        if (!email || !email.includes('@')) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: false, error: 'Valid email is required.' }));
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-        const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // Store OTP with 5-minute expiration
-        otpStore[normalizedEmail] = {
-          otp: generatedOtp,
-          expiresAt: Date.now() + 5 * 60 * 1000
-        };
-
-        // Dispatch real Gmail email via SMTP
-        const smtpResult = await sendGmailOtp(normalizedEmail, generatedOtp);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        // DO NOT return the OTP code to frontend! Secure verification only!
-        res.end(JSON.stringify({
-          success: true,
-          message: `OTP sent to ${normalizedEmail}`,
-          simulated: Boolean(smtpResult.simulated)
-        }));
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: err.message }));
-      }
-    });
-    return;
+  if (req.url.startsWith('/api/send-email-otp')) {
+    const handler = require('./api/send-email-otp.js');
+    return handler(req, res);
   }
 
   // 2. API: Verify Email OTP
-  if (req.url.startsWith('/api/verify-email-otp') && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
-    req.on('end', () => {
-      try {
-        const { email, otp } = JSON.parse(body || '{}');
-        if (!email || !otp) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: false, error: 'Email and OTP are required.' }));
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-        const record = otpStore[normalizedEmail];
-
-        if (!record) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: false, error: 'No OTP found or expired. Please request a new code.' }));
-        }
-
-        if (Date.now() > record.expiresAt) {
-          delete otpStore[normalizedEmail];
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: false, error: 'OTP code expired (valid for 5 minutes). Please request a new code.' }));
-        }
-
-        if (record.otp !== otp.trim()) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ success: false, error: 'Invalid 6-digit OTP code. Please check your email.' }));
-        }
-
-        // Verification successful -> Clear OTP from memory
-        delete otpStore[normalizedEmail];
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, message: 'OTP verified successfully!' }));
-      } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: err.message }));
-      }
-    });
-    return;
+  if (req.url.startsWith('/api/verify-email-otp')) {
+    const handler = require('./api/verify-email-otp.js');
+    return handler(req, res);
   }
 
   // Static File Server
