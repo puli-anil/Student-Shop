@@ -395,21 +395,87 @@ export class CampusStore {
   async resetPassword(email, newPassword) {
     try {
       const normalizedEmail = email.toLowerCase().trim();
+      let passHash = newPassword;
+      try {
+        if (typeof crypto !== 'undefined' && crypto.subtle) {
+          const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPassword));
+          passHash = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+      } catch (e) {}
+
+      // 1. Update Supabase Cloud Profiles Table
+      try {
+        const { data: cloudProfiles, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', normalizedEmail);
+
+        if (!error && cloudProfiles && cloudProfiles.length > 0) {
+          const p = cloudProfiles[0];
+          let currentMeta = {};
+          try {
+            currentMeta = JSON.parse(p.avatar || '{}');
+          } catch (e) {}
+
+          currentMeta.pass = passHash;
+          const updatedAvatar = JSON.stringify(currentMeta);
+
+          await supabase
+            .from('profiles')
+            .update({ avatar: updatedAvatar })
+            .eq('email', normalizedEmail);
+        } else {
+          // If profile wasn't in Supabase yet, create it with new password
+          await supabase.from('profiles').upsert([{
+            id: 'usr_' + Date.now(),
+            name: normalizedEmail.split('@')[0],
+            email: normalizedEmail,
+            college_name: this.selectedCampus.fullName,
+            roll_no: 'REG-VERIFIED',
+            hostel: this.selectedCampus.hostels[0],
+            campus: this.selectedCampus.id,
+            year: 'Verified Student',
+            avatar: JSON.stringify({
+              url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+              pass: passHash
+            }),
+            verified: true
+          }]);
+        }
+      } catch (err) {
+        console.warn('Supabase password reset profile update notice:', err);
+      }
+
+      // 2. Update local storage registered users
       const regUsers = JSON.parse(localStorage.getItem('registered_users') || '[]');
       let user = regUsers.find(u => u.email === normalizedEmail);
-
       if (user) {
         user.password = newPassword;
-        localStorage.setItem('registered_users', JSON.stringify(regUsers));
+      } else {
+        regUsers.push({
+          id: 'usr_' + Date.now(),
+          name: normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          college_name: this.selectedCampus.fullName,
+          roll_no: 'REG-VERIFIED',
+          hostel: this.selectedCampus.hostels[0],
+          campus: this.selectedCampus.id,
+          year: 'Verified Student',
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+          verified: true,
+          password: newPassword
+        });
+      }
+      localStorage.setItem('registered_users', JSON.stringify(regUsers));
+
+      // 3. Update current user if currently logged in
+      if (this.currentUser && this.currentUser.email === normalizedEmail) {
+        this.currentUser.password = newPassword;
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(this.currentUser));
       }
 
-      try {
-        await supabase.auth.updateUser({ password: newPassword });
-      } catch (e) {
-        console.warn('Supabase password reset notice:', e);
-      }
-
-      return { success: true, message: 'Password updated successfully!' };
+      this.notify();
+      return { success: true, message: 'Password updated successfully in database!' };
     } catch (err) {
       return { success: false, error: err.message };
     }
@@ -470,12 +536,14 @@ export class CampusStore {
   async addListing(newListingData) {
     if (!this.currentUser) return null;
     
+    const uniqueId = 'ad_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
     const newListing = {
+      id: uniqueId,
       user_id: this.currentUser.id,
       title: newListingData.title,
       description: newListingData.description,
       price: Number(newListingData.price) || 0,
-      price_label: newListingData.price_label || `₹ ${newListingData.price}`,
+      price_label: newListingData.price_label || (Number(newListingData.price) > 0 ? `₹ ${newListingData.price}` : 'Free'),
       category: newListingData.category,
       condition: newListingData.condition || 'Good',
       campus: this.selectedCampus.id,
@@ -485,28 +553,30 @@ export class CampusStore {
       featured: Boolean(newListingData.featured),
       listing_kind: newListingData.listing_kind || 'marketplace',
       extra: newListingData.extra || {},
-      seller_label: `${this.currentUser.name} (${this.currentUser.hostel})`,
+      seller_label: `${this.currentUser.name} (Verified Student • ${this.currentUser.college_name || this.selectedCampus.name})`,
       verified: this.currentUser.verified || false,
       created_at: new Date().toISOString()
     };
 
-    // Save to local array immediately
+    // Save to local array immediately at the top
     if (newListing.featured) {
       this.listings.unshift(newListing);
     } else {
-      this.listings.splice(1, 0, newListing);
+      this.listings.unshift(newListing);
     }
     localStorage.setItem(STORAGE_KEYS.LISTINGS, JSON.stringify(this.listings));
     this.notify();
 
-    // Push live to Supabase table
+    // Push live to Supabase table with unique ID
     try {
       const { data, error } = await supabase.from('listings').insert([newListing]).select();
-      if (!error && data && data[0]) {
+      if (error) {
+        console.error('Supabase listing insert error:', error);
+      } else if (data && data[0] && data[0].id) {
         newListing.id = data[0].id;
       }
     } catch (err) {
-      console.warn('Supabase post error:', err);
+      console.error('Supabase post error:', err);
     }
 
     return newListing;

@@ -97,9 +97,14 @@ export const App = () => {
 
       activeRoute === 'post' && e(PostAdPage, {
         onNavigate: handleNavigate,
+        onOpenAuthModal: () => setShowAuthModal(true),
         onPublished: (newAd) => {
-          setSelectedListingId(newAd.id);
-          setActiveRoute('detail');
+          if (newAd && newAd.id) {
+            setSelectedListingId(newAd.id);
+            setActiveRoute('detail');
+          } else {
+            setActiveRoute('browse');
+          }
         }
       }),
 
