@@ -44,7 +44,7 @@ export const CannedPingModal = ({ listing, onClose, onSuccess }) => {
         e('h3', { className: "font-display font-bold text-xl text-[#102A27]" }, 'Campus Ping Sent!'),
         e('p', { className: "text-xs text-[#5C6B68] mt-2 max-w-xs mx-auto" },
           'Your message was sent as ',
-          e('span', { className: "font-semibold text-stone-900" }, `${user?.name} (${user?.hostel} Hostel)`),
+          e('span', { className: "font-semibold text-stone-900" }, `${user?.email || user?.name} (${user?.hostel} Hostel)`),
           '. Seller will see it in their alerts!'
         )
       ) : e('form', { onSubmit: handleSend },
@@ -69,7 +69,7 @@ export const CannedPingModal = ({ listing, onClose, onSuccess }) => {
 
         e('div', { className: "text-xs text-stone-600 mb-3 bg-amber-50 p-2.5 rounded-lg border border-amber-200/60 flex items-center gap-2" },
           e(Icon, { name: "Building2", className: "w-4 h-4 text-amber-700 shrink-0" }),
-          e('span', null, 'Sending as ', e('strong', { className: "text-stone-900" }, user?.name), ' from ', e('strong', { className: "text-stone-900" }, `${user?.hostel} Hostel`))
+          e('span', null, 'Sending as ', e('strong', { className: "text-stone-900" }, user?.email || user?.name), ' from ', e('strong', { className: "text-stone-900" }, `${user?.hostel} Hostel`))
         ),
 
         e('div', { className: "space-y-2 mb-5" },

@@ -185,12 +185,12 @@ export const ListingDetailPage = ({
             )
           ),
 
-          e('div', { className: "flex items-center gap-3" },
-            e('div', { className: "w-12 h-12 rounded-full bg-[#102A27] text-amber-300 font-display font-bold text-xl flex items-center justify-center border-2 border-[#3D7A6E]" },
+          e('div', { className: "flex items-start gap-3 min-w-0" },
+            e('div', { className: "w-12 h-12 rounded-full bg-[#102A27] text-amber-300 font-display font-bold text-xl flex items-center justify-center border-2 border-[#3D7A6E] shrink-0" },
               listing.seller_label?.charAt(0) || 'S'
             ),
-            e('div', null,
-              e('div', { className: "font-bold text-stone-900 text-sm" }, listing.seller_label),
+            e('div', { className: "min-w-0 flex-1" },
+              e('div', { className: "font-bold text-stone-900 text-sm break-words leading-tight mb-1" }, listing.seller_label),
               e('div', { className: "text-xs text-[#5C6B68]" }, `Student at ${campus.fullName}`),
               e('div', { className: "text-[11px] text-emerald-700 font-medium" }, `${listing.hostel} • On-Campus Spot`)
             )

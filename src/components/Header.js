@@ -155,14 +155,14 @@ export const Header = ({
             onClick: () => setShowUserMenu(!showUserMenu),
             className: "flex items-center gap-2 bg-[#1C3E3A] hover:bg-[#25504B] p-1.5 pl-2.5 rounded-lg border border-[#2D6059] text-xs transition-colors"
           },
-            e('img', { src: user.avatar, alt: user.name, className: "w-6 h-6 rounded-full object-cover border border-amber-300" }),
-            e('span', { className: "font-semibold text-white max-w-[90px] truncate" }, user.name),
+            e('img', { src: user.avatar, alt: user.name || user.email, className: "w-6 h-6 rounded-full object-cover border border-amber-300" }),
+            e('span', { className: "font-semibold text-white max-w-[140px] sm:max-w-[200px] truncate" }, user.name || user.email),
             e(Icon, { name: "ChevronDown", className: "w-3.5 h-3.5 text-stone-300" })
           ),
-          showUserMenu && e('div', { className: "absolute right-0 top-full mt-1 w-52 bg-[#FFFDF8] text-stone-900 rounded-xl shadow-xl border border-[#E2DDD3] py-2 z-50" },
+          showUserMenu && e('div', { className: "absolute right-0 top-full mt-1 w-56 bg-[#FFFDF8] text-stone-900 rounded-xl shadow-xl border border-[#E2DDD3] py-2 z-50" },
             e('div', { className: "px-3 py-2 border-b border-stone-100" },
-              e('div', { className: "font-bold text-stone-900 text-xs" }, user.name),
-              e('div', { className: "text-[11px] text-stone-500" }, user.email),
+              e('div', { className: "font-bold text-stone-900 text-xs truncate" }, user.name || user.email),
+              e('div', { className: "text-[11px] text-stone-500 truncate" }, user.email),
               e('div', { className: "text-[10px] text-emerald-700 font-medium mt-0.5" }, `${user.hostel} Hostel • ${user.year}`)
             ),
             e('button', {

@@ -24,6 +24,9 @@ export class CampusStore {
     
     const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     this.currentUser = savedUser ? JSON.parse(savedUser) : null; // null = guest
+    if (this.currentUser && this.currentUser.email) {
+      this.currentUser.name = this.currentUser.email;
+    }
 
     const savedListings = localStorage.getItem(STORAGE_KEYS.LISTINGS);
     let parsedListings = savedListings ? JSON.parse(savedListings) : [];
@@ -191,7 +194,7 @@ export class CampusStore {
 
       const user = {
         id: 'usr_' + Date.now(),
-        name: name || normalizedEmail.split('@')[0],
+        name: normalizedEmail, // Profile name set as email account
         email: normalizedEmail,
         college_name: collegeName || this.selectedCampus.fullName,
         roll_no: rollNo || 'REG-' + Math.floor(100000 + Math.random()*900000),
@@ -260,6 +263,7 @@ export class CampusStore {
         if (registeredUser.password && registeredUser.password !== password) {
           return { success: false, error: 'Wrong email or password. Please check your password or reset it.' };
         }
+        registeredUser.name = registeredUser.email; // Profile name set as email account
         this.currentUser = registeredUser;
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(registeredUser));
         this.notify();
@@ -290,8 +294,8 @@ export class CampusStore {
 
           const restoredUser = {
             id: p.id,
-            name: p.name,
-            email: p.email,
+            name: p.email || normalizedEmail, // Profile name set as email account
+            email: p.email || normalizedEmail,
             college_name: p.college_name || this.selectedCampus.fullName,
             roll_no: p.roll_no || 'REG-STUDENT',
             hostel: p.hostel || this.selectedCampus.hostels[0],
@@ -321,6 +325,7 @@ export class CampusStore {
         if (password !== 'password123') {
           return { success: false, error: 'Wrong email or password. Please try again.' };
         }
+        demoUser.name = demoUser.email; // Profile name set as email account
         this.currentUser = demoUser;
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(demoUser));
         this.notify();
@@ -340,12 +345,10 @@ export class CampusStore {
   async loginWithGoogle(emailInput, nameInput) {
     try {
       const googleEmail = (emailInput || 'pulianil72@gmail.com').toLowerCase().trim();
-      const rawName = nameInput || googleEmail.split('@')[0];
-      const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
       const googleUser = {
         id: 'google_usr_' + Date.now(),
-        name: `${formattedName}`,
+        name: googleEmail, // Profile name set as email account
         email: googleEmail,
         college_name: this.selectedCampus.fullName,
         roll_no: 'REG-GOOGLE-VERIFIED',
@@ -362,7 +365,7 @@ export class CampusStore {
       try {
         await supabase.from('profiles').upsert([{
           id: googleUser.id,
-          name: googleUser.name,
+          name: googleEmail, // Profile name set as email account
           email: googleEmail,
           college_name: googleUser.college_name,
           roll_no: googleUser.roll_no,
@@ -428,7 +431,7 @@ export class CampusStore {
           // If profile wasn't in Supabase yet, create it with new password
           await supabase.from('profiles').upsert([{
             id: 'usr_' + Date.now(),
-            name: normalizedEmail.split('@')[0],
+            name: normalizedEmail, // Profile name set as email account
             email: normalizedEmail,
             college_name: this.selectedCampus.fullName,
             roll_no: 'REG-VERIFIED',
@@ -451,10 +454,11 @@ export class CampusStore {
       let user = regUsers.find(u => u.email === normalizedEmail);
       if (user) {
         user.password = newPassword;
+        user.name = normalizedEmail;
       } else {
         regUsers.push({
           id: 'usr_' + Date.now(),
-          name: normalizedEmail.split('@')[0],
+          name: normalizedEmail,
           email: normalizedEmail,
           college_name: this.selectedCampus.fullName,
           roll_no: 'REG-VERIFIED',
@@ -471,6 +475,7 @@ export class CampusStore {
       // 3. Update current user if currently logged in
       if (this.currentUser && this.currentUser.email === normalizedEmail) {
         this.currentUser.password = newPassword;
+        this.currentUser.name = normalizedEmail;
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(this.currentUser));
       }
 
@@ -513,7 +518,7 @@ export class CampusStore {
     if (!this.currentUser) return null;
     const ping = {
       listing_id: listingId,
-      from_user_name: this.currentUser.name,
+      from_user_name: this.currentUser.email || this.currentUser.name,
       from_hostel: this.currentUser.hostel || 'Hostel',
       note: note,
       created_at: new Date().toISOString()
@@ -553,7 +558,7 @@ export class CampusStore {
       featured: Boolean(newListingData.featured),
       listing_kind: newListingData.listing_kind || 'marketplace',
       extra: newListingData.extra || {},
-      seller_label: `${this.currentUser.name} (Verified Student • ${this.currentUser.college_name || this.selectedCampus.name})`,
+      seller_label: `${this.currentUser.email || this.currentUser.name} (Verified Student • ${this.currentUser.college_name || this.selectedCampus.name})`,
       verified: this.currentUser.verified || false,
       created_at: new Date().toISOString()
     };

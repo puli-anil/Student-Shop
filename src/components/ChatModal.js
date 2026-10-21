@@ -73,7 +73,7 @@ export const ChatModal = ({ listing, onClose }) => {
           e('div', { className: "font-semibold text-stone-700 text-xs" }, 'No messages yet in this chat'),
           e('div', { className: "text-[11px] text-stone-400 max-w-xs mx-auto" }, 'Send a 1-click canned ping or type a custom message to connect on campus!')
         ) : messages.map((msg, idx) => {
-          const isMe = user && msg.from_user_name === user.name;
+          const isMe = user && (msg.from_user_name === user.name || msg.from_user_name === user.email);
           return e('div', {
             key: msg.id || idx,
             className: `flex flex-col ${isMe ? 'items-end' : 'items-start'}`

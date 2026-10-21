@@ -62,7 +62,6 @@ export const AuthModal = ({ onClose, onSuccess, initialMode = 'login' }) => {
     evt.preventDefault();
     setError('');
 
-    if (!name.trim()) return setError('Please enter your full name.');
     if (!email || !email.includes('@') || !email.includes('.')) return setError('Please enter a valid email address.');
     if (!collegeName.trim()) return setError('Please enter your college name.');
     if (!rollNo.trim()) return setError('Please enter your Roll No / Reg No.');
@@ -105,7 +104,8 @@ export const AuthModal = ({ onClose, onSuccess, initialMode = 'login' }) => {
     if (password !== confirmPassword) return setError('Passwords do not match. Please re-enter.');
 
     setLoading(true);
-    const res = await store.signup(name, email, password, collegeName, rollNo);
+    const profileName = email.toLowerCase().trim();
+    const res = await store.signup(profileName, email, password, collegeName, rollNo);
     setLoading(false);
 
     if (res && res.success) {
@@ -258,13 +258,13 @@ export const AuthModal = ({ onClose, onSuccess, initialMode = 'login' }) => {
           /* Saved Account 1 */
           e('button', {
             type: "button",
-            onClick: () => handleSelectGoogleAccount('pulianil72@gmail.com', 'Anil Puli'),
+            onClick: () => handleSelectGoogleAccount('pulianil72@gmail.com', 'pulianil72@gmail.com'),
             className: "w-full text-left p-3 rounded-xl border border-stone-200 bg-white hover:border-emerald-600 hover:bg-emerald-50/60 transition-all flex items-center gap-3 group shadow-xs"
           },
-            e('div', { className: "w-9 h-9 rounded-full bg-[#102A27] text-amber-300 font-bold flex items-center justify-center text-sm shadow-xs" }, 'AP'),
+            e('div', { className: "w-9 h-9 rounded-full bg-[#102A27] text-amber-300 font-bold flex items-center justify-center text-xs shadow-xs" }, 'PA'),
             e('div', { className: "flex-1 min-w-0" },
-              e('div', { className: "font-bold text-xs text-stone-900 group-hover:text-emerald-950" }, 'Anil Puli'),
-              e('div', { className: "text-[11px] text-stone-500 truncate" }, 'pulianil72@gmail.com')
+              e('div', { className: "font-bold text-xs text-stone-900 group-hover:text-emerald-950 truncate" }, 'pulianil72@gmail.com'),
+              e('div', { className: "text-[11px] text-stone-500 truncate" }, 'Verified Student Account')
             ),
             e(Icon, { name: "ChevronRight", className: "w-4 h-4 text-stone-400 group-hover:text-emerald-600" })
           ),
@@ -272,13 +272,13 @@ export const AuthModal = ({ onClose, onSuccess, initialMode = 'login' }) => {
           /* Saved Account 2 */
           e('button', {
             type: "button",
-            onClick: () => handleSelectGoogleAccount('anil.rvrjc@gmail.com', 'Anil Student'),
+            onClick: () => handleSelectGoogleAccount('anil.rvrjc@gmail.com', 'anil.rvrjc@gmail.com'),
             className: "w-full text-left p-3 rounded-xl border border-stone-200 bg-white hover:border-emerald-600 hover:bg-emerald-50/60 transition-all flex items-center gap-3 group shadow-xs"
           },
-            e('div', { className: "w-9 h-9 rounded-full bg-[#3D7A6E] text-white font-bold flex items-center justify-center text-sm shadow-xs" }, 'AS'),
+            e('div', { className: "w-9 h-9 rounded-full bg-[#3D7A6E] text-white font-bold flex items-center justify-center text-xs shadow-xs" }, 'AR'),
             e('div', { className: "flex-1 min-w-0" },
-              e('div', { className: "font-bold text-xs text-stone-900 group-hover:text-emerald-950" }, 'Anil Student (RVR & JC)'),
-              e('div', { className: "text-[11px] text-stone-500 truncate" }, 'anil.rvrjc@gmail.com')
+              e('div', { className: "font-bold text-xs text-stone-900 group-hover:text-emerald-950 truncate" }, 'anil.rvrjc@gmail.com'),
+              e('div', { className: "text-[11px] text-stone-500 truncate" }, 'RVR & JC College Account')
             ),
             e(Icon, { name: "ChevronRight", className: "w-4 h-4 text-stone-400 group-hover:text-emerald-600" })
           ),
@@ -427,13 +427,12 @@ export const AuthModal = ({ onClose, onSuccess, initialMode = 'login' }) => {
         mode === 'signup' && e(React.Fragment, null,
           step === 'signup_details' && e('form', { onSubmit: handleSignupSendOtp, className: "space-y-3" },
             e('div', null,
-              e('label', { className: "block text-xs font-semibold text-stone-700 mb-1" }, 'Full Name'),
+              e('label', { className: "block text-xs font-semibold text-stone-700 mb-1" }, 'Profile Name (defaults to your email)'),
               e('input', {
                 type: "text",
-                required: true,
                 value: name,
                 onChange: (evt) => setName(evt.target.value),
-                placeholder: "e.g. Rahul Sharma",
+                placeholder: "Leave empty to use email as profile name",
                 className: "w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#3D7A6E] focus:outline-none"
               })
             ),

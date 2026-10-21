@@ -47,17 +47,17 @@ export const MyAdsPage = ({ onNavigate, onSelectListing, onOpenAuthModal }) => {
     
     /* Header User Info */
     e('div', { className: "bg-[#102A27] text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" },
-      e('div', { className: "flex items-center gap-4" },
-        e('img', { src: user.avatar, alt: user.name, className: "w-16 h-16 rounded-full object-cover border-2 border-amber-300" }),
-        e('div', null,
+      e('div', { className: "flex items-center gap-4 min-w-0" },
+        e('img', { src: user.avatar, alt: user.name || user.email, className: "w-16 h-16 rounded-full object-cover border-2 border-amber-300 shrink-0" }),
+        e('div', { className: "min-w-0" },
           e('div', { className: "flex items-center gap-2" },
-            e('h1', { className: "font-display font-bold text-2xl" }, user.name),
-            user.verified && e('span', { className: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1" },
+            e('h1', { className: "font-display font-bold text-xl sm:text-2xl truncate" }, user.name || user.email),
+            user.verified && e('span', { className: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0" },
               e(Icon, { name: "CheckCircle2", className: "w-3 h-3 text-emerald-400" }),
               'Verified'
             )
           ),
-          e('p', { className: "text-xs text-stone-300" }, `${user.email} • ${user.year}`),
+          e('p', { className: "text-xs text-stone-300 truncate" }, `${user.college_name || store.selectedCampus.fullName} • ${user.year}`),
           e('p', { className: "text-xs text-amber-300 font-semibold" }, `${user.hostel} Hostel • ${store.selectedCampus.name}`)
         )
       ),
